@@ -1,5 +1,5 @@
 {
-  "name": "ts-easy",
+  "name": "papi-node",
   "version": "1.0.0",
   "description": "",
   "main": "dist/main.js",
@@ -9,7 +9,8 @@
     "start": "dotenv -e .env -- node ./dist/main.js",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "format": "pnpm dlx prettier --config .prettierrc 'src/**/*.ts' --write"
+    "format": "pnpm dlx prettier --config .prettierrc 'src/**/*.ts' --write",
+    "postinstall": "papi"
   },
   "devDependencies": {
     "@eslint/js": "^9.4.0",
@@ -27,8 +28,10 @@
     "typescript-eslint": "^7.11.0"
   },
   "dependencies": {
+    "@polkadot-api/descriptors": "file:.papi/descriptors",
     "dotenv": "^16.4.5",
     "dotenv-cli": "^7.4.2",
+    "polkadot-api": "^1.0.1",
     "zod": "^3.21.4"
   },
   "author": "",
