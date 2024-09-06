@@ -8,9 +8,16 @@ import { wnd } from '@polkadot-api/descriptors';
 import { Binary, createClient } from 'polkadot-api';
 import { getWsProvider } from 'polkadot-api/ws-provider/node';
 
+const JSONprint = (e: unknown) =>
+  JSON.stringify(e, (_, v) => (typeof v === 'bigint' ? v.toString() : v), 4);
+
 const main = async () => {
+  if (!process.env.MNEMONIC) {
+    throw new Error('MNEMONIC not set');
+  }
+
   const aliceKeyPair = sr25519CreateDerive(
-    entropyToMiniSecret(mnemonicToEntropy('YOUR_MNEMONIC_HERE')),
+    entropyToMiniSecret(mnemonicToEntropy(process.env.MNEMONIC)),
   )('');
 
   const aliceSigner = getPolkadotSigner(
@@ -28,7 +35,9 @@ const main = async () => {
   // create the call from some call-data
   // here a batch with a remark, and a system.setCode that we're not allowed to do
   const tx = await api.txFromCallData(
-    Binary.fromHex('0x10000800002c73686f756c6420776f726b000208beef'),
+    Binary.fromHex(
+      '0x1702020004d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d0000000000000000000000000000000000000000000000000000000000000000000000',
+    ),
   );
   // create the signed extrinsic
   const signedTx = await tx.sign(aliceSigner);
@@ -39,7 +48,7 @@ const main = async () => {
   );
   // `dryRunResult` is a strongly typed object, so if `success` is false, then
   // the value will have a strongly typed enum with the reason why it didn't succeed
-  console.log(dryRunResult);
+  console.log(JSONprint(dryRunResult));
   // { success: true, value: { success: true, value: undefined } }
 
   // The the dry run is successful, but there are errors in the events
@@ -49,17 +58,12 @@ const main = async () => {
       .submitAndWatch(signedTx)
       .subscribe((event) => {
         if (event.type === 'txBestBlocksState' && event.found === true) {
-          console.log('dispatchError', event.dispatchError);
-          event.events.forEach((e) =>
-            console.log(
-              JSON.stringify(e, (_, v) =>
-                typeof v === 'bigint' ? v.toString() : v,
-              ),
-            ),
-          );
+          console.log('======== DispatchError', JSONprint(event.dispatchError));
+          console.log('========= Events');
+          event.events.forEach((e) => console.log(JSONprint(e)));
         }
 
-        //  dispatchError undefined
+        // DispatchError undefined
         // {"type":"Balances","value":{"type":"Withdraw","value":{"who":"5HbVkMa1pk2aDBv7CGGyN3AQYjy9W3wwGRPd8kSXF1eAVpdX","amount":"127369831879"}}}
         // {"type":"Utility","value":{"type":"ItemCompleted"}}
         // {"type":"Utility","value":{"type":"BatchInterrupted","value":{"index":1,"error":{"type":"BadOrigin"}}}}
