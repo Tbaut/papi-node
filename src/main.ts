@@ -1,166 +1,76 @@
-import { dot, people, alep, ksm } from '@polkadot-api/descriptors';
-import { createClient, Transaction, type TypedApi } from 'polkadot-api';
-import { withPolkadotSdkCompat } from 'polkadot-api/polkadot-sdk-compat';
+import { sr25519CreateDerive } from '@polkadot-labs/hdkd';
+import {
+  entropyToMiniSecret,
+  mnemonicToEntropy,
+} from '@polkadot-labs/hdkd-helpers';
+import { getPolkadotSigner } from 'polkadot-api/signer';
+import { wnd } from '@polkadot-api/descriptors';
+import { Binary, createClient } from 'polkadot-api';
 import { getWsProvider } from 'polkadot-api/ws-provider/node';
 
-// const pplWs = getWsProvider('wss://polkadot-people-rpc.polkadot.io');
-// const pplClient = createClient(pplWs);
-// const peopleApi = pplClient.getTypedApi(people);
+const main = async () => {
+  const aliceKeyPair = sr25519CreateDerive(
+    entropyToMiniSecret(mnemonicToEntropy('YOUR_MNEMONIC_HERE')),
+  )('');
 
-// const alepWs = getWsProvider('wss://aleph-zero.api.onfinality.io/public-ws');
-// const alepClient = createClient(withPolkadotSdkCompat(alepWs));
-// const alepApi = alepClient.getTypedApi(alep);
+  const aliceSigner = getPolkadotSigner(
+    aliceKeyPair.publicKey,
+    'Sr25519',
+    aliceKeyPair.sign,
+  );
 
-const dotWs = getWsProvider('wss://rpc.ibp.network/polkadot');
-const dotClient = createClient(dotWs);
-const dotApi = dotClient.getTypedApi(dot);
+  // CLIENT AND API
+  const client = createClient(
+    getWsProvider('wss://rpc.dotters.network/westend'),
+  );
+  const api = client.getTypedApi(wnd);
 
-const ksmWs = getWsProvider('wss://rpc.ibp.network/kusama');
-const ksmClient = createClient(ksmWs);
-const ksmApi = dotClient.getTypedApi(ksm);
-// With the `client`, you can get information such as subscribing to the last
-// block to get the latest hash:
-// pplClient.finalizedBlock$.subscribe((finalizedBlock) =>
-//   console.log(finalizedBlock.number, finalizedBlock.hash)
-// );
+  // create the call from some call-data
+  // here a batch with a remark, and a system.setCode that we're not allowed to do
+  const tx = await api.txFromCallData(
+    Binary.fromHex('0x10000800002c73686f756c6420776f726b000208beef'),
+  );
+  // create the signed extrinsic
+  const signedTx = await tx.sign(aliceSigner);
+  // see what the result of this extrinsic would be against the current best-block
+  const dryRunResult = await api.apis.BlockBuilder.apply_extrinsic(
+    Binary.fromOpaqueHex(signedTx),
+    { at: 'best' },
+  );
+  // `dryRunResult` is a strongly typed object, so if `success` is false, then
+  // the value will have a strongly typed enum with the reason why it didn't succeed
+  console.log(dryRunResult);
+  // { success: true, value: { success: true, value: undefined } }
 
-// const alepAddress = '5Gjy5yh1ZtHFDkqptN2UqyMMqTjPSZSH8nJcz3oTA6Z6Dtmy';
-// const polkadotAddress = '12doHFjPjPngNvZCWX4WeF4rkLFJ5LmmEyDvPGQ2C1aPppwy';
-// const pplAddress = '13Mg5VGLpLSHKfKhEzicruy7GBqY5MNcRiCyzHK9HvZti9rf';
+  // The the dry run is successful, but there are errors in the events
+  // although the dispatchError is undefined
+  if (dryRunResult.success) {
+    const submitResult = await client
+      .submitAndWatch(signedTx)
+      .subscribe((event) => {
+        if (event.type === 'txBestBlocksState' && event.found === true) {
+          console.log('dispatchError', event.dispatchError);
+          event.events.forEach((e) =>
+            console.log(
+              JSON.stringify(e, (_, v) =>
+                typeof v === 'bigint' ? v.toString() : v,
+              ),
+            ),
+          );
+        }
 
-// const getIdentity = async ({
-//   api,
-//   type,
-//   address,
-// }:
-//    {
-//       type: 'people';
-//       api: TypedApi<typeof people>;
-//       address: string;
-//     }
-//   | {
-//       type: 'alep';
-//       api: TypedApi<typeof alep>;
-//       address: string;
-//     }) => {
-//   const val = await api.query.Identity.IdentityOf.getValue(address);
-
-//   if (!val) {
-//     console.log('no val');
-//     return;
-//   }
-
-//   if (type === 'people') {
-//     const [res] = val;
-//     console.log('ppl', res.info);
-//     return;
-//   }
-
-//   if (type === 'alep') {
-//     const { info } = val;
-//     console.log('alep', info);
-//     return;
-//   }
-// };
-
-// type IdentityParams =
-//   | {
-//       type: 'people';
-//       api: TypedApi<typeof people>;
-//       address: string;
-//     }
-//   | {
-//       type: 'alep';
-//       api: TypedApi<typeof alep>;
-//       address: string;
-//     };
-
-// const getIdentity = async ({ type, api, address }: IdentityParams) => {
-//   if (type === 'people') {
-//     const val = await api.query.Identity.IdentityOf.getValue(address);
-
-//     if (!val) {
-//       console.log('no val');
-//       return;
-//     }
-//     const [res] = val; // api is inferred to be TypedApi<typeof people>
-//     console.log('ppl', res.info.display.value?.asText());
-//     return;
-//   }
-
-//   if (type === 'alep') {
-//     const val = await api.query.Identity.IdentityOf.getValue(address);
-
-//     if (!val) {
-//       console.log('no val');
-//       return;
-//     }
-
-//     const { info } = val; // api is inferred to be TypedApi<typeof alep>
-//     console.log('alep', info.display.value?.asText());
-//     return;
-//   }
-// };
-
-// // getIdentity(dotApi);
-// getIdentity({ api: peopleApi, type: 'people', address: pplAddress });
-// getIdentity({ api: alepApi, type: 'alep', address: alepAddress });
-
-type Params =
-  | {
-      type: 'polkadot';
-      api: TypedApi<typeof dot>;
-      threshold: number;
-      otherSignatories: string[];
-      tx: Transaction<any, any, any, any>;
-      weight?: { ref_time: bigint; proof_size: bigint };
-    }
-  | {
-      type: 'ksm';
-      api: TypedApi<typeof ksm>;
-      threshold: number;
-      otherSignatories: string[];
-      tx: Transaction<any, any, any, any>;
-      weight?: { ref_time: bigint; proof_size: bigint };
-    };
-
-const getAsMultiTx = ({
-  api,
-  threshold,
-  otherSignatories,
-  tx,
-  weight,
-  type,
-}: Params) => {
-  let foo: ReturnType<typeof api.tx.Multisig.as_multi>;
-
-  if (type === 'polkadot') {
-    foo = api.tx.Multisig.as_multi({
-      threshold,
-      other_signatories: otherSignatories,
-      maybe_timepoint: undefined,
-      max_weight: weight || { proof_size: 0n, ref_time: 0n },
-      call: tx.decodedCall,
-    });
+        //  dispatchError undefined
+        // {"type":"Balances","value":{"type":"Withdraw","value":{"who":"5HbVkMa1pk2aDBv7CGGyN3AQYjy9W3wwGRPd8kSXF1eAVpdX","amount":"127369831879"}}}
+        // {"type":"Utility","value":{"type":"ItemCompleted"}}
+        // {"type":"Utility","value":{"type":"BatchInterrupted","value":{"index":1,"error":{"type":"BadOrigin"}}}}
+        // {"type":"Balances","value":{"type":"Deposit","value":{"who":"5HbVkMa1pk2aDBv7CGGyN3AQYjy9W3wwGRPd8kSXF1eAVpdX","amount":"0"}}}
+        // {"type":"Balances","value":{"type":"Deposit","value":{"who":"5G1ojzh47Yt8KoYhuAjXpHcazvsoCXe3G8LZchKDvumozJJJ","amount":"127369831879"}}}
+        // {"type":"TransactionPayment","value":{"type":"TransactionFeePaid","value":{"who":"5HbVkMa1pk2aDBv7CGGyN3AQYjy9W3wwGRPd8kSXF1eAVpdX","actual_fee":"127369831879","tip":"0"}}}
+        // {"type":"System","value":{"type":"ExtrinsicSuccess","value":{"dispatch_info":{"weight":{"ref_time":"129165303376","proof_size":"1485"},"class":{"type":"Normal"},"pays_fee":{"type":"Yes"}}}}}
+      });
   } else {
-    foo = api.tx.Multisig.as_multi({
-      threshold,
-      other_signatories: otherSignatories,
-      maybe_timepoint: undefined,
-      max_weight: weight || { proof_size: 0n, ref_time: 0n },
-      call: tx.decodedCall,
-    });
+    console.log('dryrun failed');
   }
-
-  // comment the above, and uncomment the below to have the issue
-
-  // const foo = api.tx.Multisig.as_multi({
-  //   threshold,
-  //   other_signatories: otherSignatories,
-  //   maybe_timepoint: undefined,
-  //   max_weight: weight || { proof_size: 0n, ref_time: 0n },
-  //   call: tx.decodedCall
-  // });
-
-  return foo;
 };
+
+main();

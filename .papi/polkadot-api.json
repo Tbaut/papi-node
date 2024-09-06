@@ -17,6 +17,10 @@
     "ksm": {
       "chain": "ksmcc3",
       "metadata": ".papi/metadata/ksm.scale"
+    },
+    "wnd": {
+      "chain": "westend2",
+      "metadata": ".papi/metadata/wnd.scale"
     }
   }
 }

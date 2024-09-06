@@ -29,6 +29,8 @@
   },
   "dependencies": {
     "@polkadot-api/descriptors": "file:.papi/descriptors",
+    "@polkadot-labs/hdkd": "^0.0.7",
+    "@polkadot-labs/hdkd-helpers": "^0.0.7",
     "dotenv": "^16.4.5",
     "dotenv-cli": "^7.4.2",
     "polkadot-api": "^1.2.0",
