@@ -48,7 +48,7 @@ const main = async () => {
   );
   // `dryRunResult` is a strongly typed object, so if `success` is false, then
   // the value will have a strongly typed enum with the reason why it didn't succeed
-  console.log(JSONprint(dryRunResult));
+  console.log('======== dryRunResult', JSONprint(dryRunResult));
   // { success: true, value: { success: true, value: undefined } }
 
   // The the dry run is successful, but there are errors in the events
@@ -71,6 +71,102 @@ const main = async () => {
         // {"type":"Balances","value":{"type":"Deposit","value":{"who":"5G1ojzh47Yt8KoYhuAjXpHcazvsoCXe3G8LZchKDvumozJJJ","amount":"127369831879"}}}
         // {"type":"TransactionPayment","value":{"type":"TransactionFeePaid","value":{"who":"5HbVkMa1pk2aDBv7CGGyN3AQYjy9W3wwGRPd8kSXF1eAVpdX","actual_fee":"127369831879","tip":"0"}}}
         // {"type":"System","value":{"type":"ExtrinsicSuccess","value":{"dispatch_info":{"weight":{"ref_time":"129165303376","proof_size":"1485"},"class":{"type":"Normal"},"pays_fee":{"type":"Yes"}}}}}
+
+        // ======== dryRunResult {
+        //     "success": true,
+        //     "value": {
+        //         "success": false,
+        //         "value": {
+        //             "type": "Module",
+        //             "value": {
+        //                 "type": "Multisig",
+        //                 "value": {
+        //                     "type": "NoTimepoint"
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+        // ======== DispatchError {
+        //     "type": "Module",
+        //     "value": {
+        //         "type": "Multisig",
+        //         "value": {
+        //             "type": "NoTimepoint"
+        //         }
+        //     }
+        // }
+        // ========= Events
+        // {
+        //     "type": "Balances",
+        //     "value": {
+        //         "type": "Withdraw",
+        //         "value": {
+        //             "who": "5HbVkMa1pk2aDBv7CGGyN3AQYjy9W3wwGRPd8kSXF1eAVpdX",
+        //             "amount": "18939367701"
+        //         }
+        //     }
+        // }
+        // {
+        //     "type": "Balances",
+        //     "value": {
+        //         "type": "Deposit",
+        //         "value": {
+        //             "who": "5HbVkMa1pk2aDBv7CGGyN3AQYjy9W3wwGRPd8kSXF1eAVpdX",
+        //             "amount": "0"
+        //         }
+        //     }
+        // }
+        // {
+        //     "type": "Balances",
+        //     "value": {
+        //         "type": "Deposit",
+        //         "value": {
+        //             "who": "5C556QTtg1bJ43GDSgeowa3Ark6aeSHGTac1b2rKSXtgmSmW",
+        //             "amount": "18939367701"
+        //         }
+        //     }
+        // }
+        // {
+        //     "type": "TransactionPayment",
+        //     "value": {
+        //         "type": "TransactionFeePaid",
+        //         "value": {
+        //             "who": "5HbVkMa1pk2aDBv7CGGyN3AQYjy9W3wwGRPd8kSXF1eAVpdX",
+        //             "actual_fee": "18939367701",
+        //             "tip": "0"
+        //         }
+        //     }
+        // }
+        // {
+        //     "type": "System",
+        //     "value": {
+        //         "type": "ExtrinsicFailed",
+        //         "value": {
+        //             "dispatch_error": {
+        //                 "type": "Module",
+        //                 "value": {
+        //                     "type": "Multisig",
+        //                     "value": {
+        //                         "type": "NoTimepoint"
+        //                     }
+        //                 }
+        //             },
+        //             "dispatch_info": {
+        //                 "weight": {
+        //                     "ref_time": "271998306",
+        //                     "proof_size": "6811"
+        //                 },
+        //                 "class": {
+        //                     "type": "Normal"
+        //                 },
+        //                 "pays_fee": {
+        //                     "type": "Yes"
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
       });
   } else {
     console.log('dryrun failed');
