@@ -13,6 +13,10 @@
     "dot": {
       "chain": "polkadot",
       "metadata": ".papi/metadata/dot.scale"
+    },
+    "wnd": {
+      "chain": "westend2",
+      "metadata": ".papi/metadata/wnd.scale"
     }
   }
 }
