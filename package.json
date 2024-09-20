@@ -29,9 +29,11 @@
   },
   "dependencies": {
     "@polkadot-api/descriptors": "file:.papi/descriptors",
+    "@polkadot-api/substrate-bindings": "^0.7.0",
+    "@polkadot-api/utils": "^0.1.1",
     "dotenv": "^16.4.5",
     "dotenv-cli": "^7.4.2",
-    "polkadot-api": "^1.2.0",
+    "polkadot-api": "^1.2.1",
     "zod": "^3.23.8"
   },
   "author": "",

@@ -1,15 +1,22 @@
-import { dot, people, alep } from '@polkadot-api/descriptors';
-import { createClient, type TypedApi } from 'polkadot-api';
-import { withPolkadotSdkCompat } from 'polkadot-api/polkadot-sdk-compat';
+import { pas } from '@polkadot-api/descriptors';
+import { Binary, createClient, HexString, type TypedApi } from 'polkadot-api';
+// import { withPolkadotSdkCompat } from 'polkadot-api/polkadot-sdk-compat';
 import { getWsProvider } from 'polkadot-api/ws-provider/node';
+import { JSONprint } from './utils';
+import { fromHex, toHex } from 'polkadot-api/utils';
+import { Blake2256 } from '@polkadot-api/substrate-bindings';
 
-const pplWs = getWsProvider('wss://polkadot-people-rpc.polkadot.io');
-const pplClient = createClient(pplWs);
-const peopleApi = pplClient.getTypedApi(people);
+const pasWs = getWsProvider('wss://paseo.rpc.amforc.com');
+const pasClient = createClient(pasWs);
+const pasApi = pasClient.getTypedApi(pas);
 
-const alepWs = getWsProvider('wss://aleph-zero.api.onfinality.io/public-ws');
-const alepClient = createClient(withPolkadotSdkCompat(alepWs));
-const alepApi = alepClient.getTypedApi(alep);
+// const pplWs = getWsProvider('wss://polkadot-people-rpc.polkadot.io');
+// const pplClient = createClient(pplWs);
+// const peopleApi = pplClient.getTypedApi(people);
+
+// const alepWs = getWsProvider('wss://aleph-zero.api.onfinality.io/public-ws');
+// const alepClient = createClient(withPolkadotSdkCompat(alepWs));
+// const alepApi = alepClient.getTypedApi(alep);
 
 // const dotWs = getWsProvider('wss://rpc.ibp.network/polkadot');
 // const dotClient = createClient(dotWs);
@@ -21,9 +28,8 @@ const alepApi = alepClient.getTypedApi(alep);
 //   console.log(finalizedBlock.number, finalizedBlock.hash)
 // );
 
-const alepAddress = '5Gjy5yh1ZtHFDkqptN2UqyMMqTjPSZSH8nJcz3oTA6Z6Dtmy';
-const polkadotAddress = '12doHFjPjPngNvZCWX4WeF4rkLFJ5LmmEyDvPGQ2C1aPppwy';
-const pplAddress = '13Mg5VGLpLSHKfKhEzicruy7GBqY5MNcRiCyzHK9HvZti9rf';
+// const polkadotAddress = '12doHFjPjPngNvZCWX4WeF4rkLFJ5LmmEyDvPGQ2C1aPppwy';
+// const pplAddress = '13Mg5VGLpLSHKfKhEzicruy7GBqY5MNcRiCyzHK9HvZti9rf';
 
 // const getIdentity = async ({
 //   api,
@@ -59,46 +65,23 @@ const pplAddress = '13Mg5VGLpLSHKfKhEzicruy7GBqY5MNcRiCyzHK9HvZti9rf';
 //     return;
 //   }
 // };
+const hashFromTx = (tx: HexString) => toHex(Blake2256(fromHex(proxyCallData)));
 
-type IdentityParams =
-  | {
-      type: 'people';
-      api: TypedApi<typeof people>;
-      address: string;
-    }
-  | {
-      type: 'alep';
-      api: TypedApi<typeof alep>;
-      address: string;
-    };
+const proxyCallData =
+  '0x1d0000145d6c503d0cf97f4c7725ca773741bd02e1760bfb52e021af5a9f2de283012c00000018626c61626c61';
+const main = async () => {
+  const transaction = await pasApi.txFromCallData(
+    Binary.fromHex(proxyCallData),
+  );
+  console.log('tx', JSONprint(transaction.decodedCall));
 
-const getIdentity = async ({ type, api, address }: IdentityParams) => {
-  if (type === 'people') {
-    const val = await api.query.Identity.IdentityOf.getValue(address);
-
-    if (!val) {
-      console.log('no val');
-      return;
-    }
-    const [res] = val; // api is inferred to be TypedApi<typeof people>
-    console.log('ppl', res.info.display.value?.asText());
-    return;
-  }
-
-  if (type === 'alep') {
-    const val = await api.query.Identity.IdentityOf.getValue(address);
-
-    if (!val) {
-      console.log('no val');
-      return;
-    }
-
-    const { info } = val; // api is inferred to be TypedApi<typeof alep>
-    console.log('alep', info.display.value?.asText());
-    return;
+  console.log('hash', hashFromTx(proxyCallData));
+  if (
+    transaction.decodedCall.type === 'Proxy' &&
+    transaction.decodedCall.value.type === 'proxy'
+  ) {
+    console.log('---> ok');
   }
 };
 
-// getIdentity(dotApi);
-getIdentity({ api: peopleApi, type: 'people', address: pplAddress });
-getIdentity({ api: alepApi, type: 'alep', address: alepAddress });
+main();
