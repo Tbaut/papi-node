@@ -1,4 +1,4 @@
-import { pas } from '@polkadot-api/descriptors';
+import { IdentityData, pas, people } from '@polkadot-api/descriptors';
 import { Binary, createClient, HexString, type TypedApi } from 'polkadot-api';
 // import { withPolkadotSdkCompat } from 'polkadot-api/polkadot-sdk-compat';
 import { getWsProvider } from 'polkadot-api/ws-provider/node';
@@ -6,13 +6,13 @@ import { JSONprint } from './utils';
 import { fromHex, toHex } from 'polkadot-api/utils';
 import { Blake2256 } from '@polkadot-api/substrate-bindings';
 
-const pasWs = getWsProvider('wss://paseo.rpc.amforc.com');
-const pasClient = createClient(pasWs);
-const pasApi = pasClient.getTypedApi(pas);
+// const pasWs = getWsProvider('wss://paseo.rpc.amforc.com');
+// const pasClient = createClient(pasWs);
+// const pasApi = pasClient.getTypedApi(pas);
 
-// const pplWs = getWsProvider('wss://polkadot-people-rpc.polkadot.io');
-// const pplClient = createClient(pplWs);
-// const peopleApi = pplClient.getTypedApi(people);
+const pplWs = getWsProvider('wss://polkadot-people-rpc.polkadot.io');
+const pplClient = createClient(pplWs);
+const peopleApi = pplClient.getTypedApi(people);
 
 // const alepWs = getWsProvider('wss://aleph-zero.api.onfinality.io/public-ws');
 // const alepClient = createClient(withPolkadotSdkCompat(alepWs));
@@ -69,19 +69,24 @@ const hashFromTx = (tx: HexString) => toHex(Blake2256(fromHex(proxyCallData)));
 
 const proxyCallData =
   '0x1d0000145d6c503d0cf97f4c7725ca773741bd02e1760bfb52e021af5a9f2de283012c00000018626c61626c61';
-const main = async () => {
-  const transaction = await pasApi.txFromCallData(
-    Binary.fromHex(proxyCallData),
-  );
-  console.log('tx', JSONprint(transaction.decodedCall));
 
-  console.log('hash', hashFromTx(proxyCallData));
-  if (
-    transaction.decodedCall.type === 'Proxy' &&
-    transaction.decodedCall.value.type === 'proxy'
-  ) {
-    console.log('---> ok');
-  }
+const address = '5CXQZrh1MSgnGGCdJu3tqvRfCv7t5iQXGGV9UKotrbfhkavs';
+
+const main = async () => {
+  peopleApi.query.Identity.IdentityOf.watchValue(address, 'best').subscribe(
+    (val) => {
+      const id: Record<string, any> = { judgements: [] };
+      val?.[0].judgements.forEach(([, judgement]) => {
+        id.judgements.push(judgement.type);
+      });
+      Object.entries(val?.[0]?.info || {}).forEach(([key, value]) => {
+        console.log(JSONprint(key), JSONprint(value));
+        id[key] = (value as IdentityData).type?.toString();
+      });
+
+      // console.log(JSONprint(id));
+    },
+  );
 };
 
 main();
