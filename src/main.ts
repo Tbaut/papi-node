@@ -8,11 +8,14 @@ import {
 } from '@polkadot-api/metadata-builders';
 import {
   AccountId,
+  Bin,
   compact,
   createDecoder,
   enhanceDecoder,
+  HexString,
   metadata as metadataCodec,
   Struct,
+  Tuple,
   u8,
   Variant,
   type Decoder,
@@ -25,8 +28,69 @@ const pasWs = getWsProvider('wss://paseo.rpc.amforc.com');
 const pasClient = createClient(pasWs);
 const pasApi = pasClient.getTypedApi(pas);
 
-const main = async () => {
-  const rawMetadata = await pasApi.apis.Metadata.metadata();
+// const getDecoder = async () => {
+//   const rawMetadata = await pasApi.apis.Metadata.metadata();
+
+//   const metadata = metadataCodec.dec(rawMetadata.asBytes()).metadata
+//     .value as V14;
+//   const dynBuilder = getDynamicBuilder(getLookupFn(metadata));
+
+//   const versionDec = enhanceDecoder(u8[1], (value) => ({
+//     version: value & ~(1 << 7),
+//     signed: !!(value & (1 << 7)),
+//   }));
+
+//   const address = Variant({
+//     Id: AccountId(),
+//     Raw: Hex(),
+//     Address32: Hex(32),
+//     Address20: Hex(20),
+//   }).dec;
+//   const signature = Variant({
+//     Ed25519: Hex(64),
+//     Sr25519: Hex(64),
+//     Ecdsa: Hex(65),
+//   }).dec;
+//   const extra = Struct.dec(
+//     Object.fromEntries(
+//       metadata.extrinsic.signedExtensions.map(
+//         (x) =>
+//           [x.identifier, dynBuilder.buildDefinition(x.type)[1]] as [
+//             string,
+//             Decoder<any>,
+//           ],
+//       ),
+//     ) as StringRecord<Decoder<any>>,
+//   );
+
+//   const allBytesDec = Hex(Infinity).dec;
+//   const signedBody = Struct.dec({
+//     address,
+//     signature,
+//     extra,
+//     callData: allBytesDec,
+//   });
+
+//   const decoded = createDecoder((data) => {
+//     const len = compact.dec(data);
+//     const { signed, version } = versionDec(data);
+//     const body = signed ? signedBody : allBytesDec;
+//     return { len, signed, version, body: body(data) };
+//   });
+
+//   return decoded;
+// };
+
+const opaqueMetadata = Tuple(compact, Bin(Infinity)).dec;
+
+const getExtDecoderAt = async (blockHash?: string) => {
+  const rawMetadata = await (blockHash
+    ? pasClient
+        ._request<{
+          result: HexString;
+        }>('archive_unstable_call', [blockHash, 'Metadata_metadata', ''])
+        .then((x) => opaqueMetadata(x.result)[1])
+    : pasApi.apis.Metadata.metadata());
 
   const metadata = metadataCodec.dec(rawMetadata.asBytes()).metadata
     .value as V14;
@@ -48,6 +112,7 @@ const main = async () => {
     Sr25519: Hex(64),
     Ecdsa: Hex(65),
   }).dec;
+
   const extra = Struct.dec(
     Object.fromEntries(
       metadata.extrinsic.signedExtensions.map(
@@ -68,13 +133,15 @@ const main = async () => {
     callData: allBytesDec,
   });
 
-  const extrinsicDecoder = createDecoder((data) => {
+  return createDecoder((data) => {
     const len = compact.dec(data);
     const { signed, version } = versionDec(data);
     const body = signed ? signedBody : allBytesDec;
     return { len, signed, version, body: body(data) };
   });
+};
 
+const main = async () => {
   const BLOCK_HEIGHT = 14004;
 
   const blockHash = await pasClient._request('archive_unstable_hashByHeight', [
@@ -93,9 +160,10 @@ const main = async () => {
   console.log('blockHash', JSONprint(blockHash[0]));
   console.log('body', JSONprint(body));
 
+  const decoder = await getExtDecoderAt(blockHash[0]);
   body.forEach((tx: string) => {
     console.log('-----------------------------');
-    console.log(JSONprint(extrinsicDecoder(tx)));
+    console.log(JSONprint(decoder(tx)));
   });
 
   //   blockHash "0x83dae55d34d3bc082e29a6c102522f83b08ad22562e2fdc61eb63c0b2c91c64d"
