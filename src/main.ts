@@ -25,7 +25,16 @@ import {
 import { Hex } from '@polkadot-api/substrate-bindings';
 
 export const JSONprint = (e: unknown) =>
-  JSON.stringify(e, (_, v) => (typeof v === 'bigint' ? v.toString() : v), 4);
+  JSON.stringify(
+    e,
+    (_, v) =>
+      typeof v === 'bigint'
+        ? v.toString()
+        : v instanceof Binary
+          ? v.asHex()
+          : v,
+    4,
+  );
 
 const pasWs = getWsProvider('wss://paseo.rpc.amforc.com');
 const pasClient = createClient(pasWs);
