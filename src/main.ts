@@ -42,16 +42,16 @@ const main = async () => {
   await client.submitAndWatch(signedTx).subscribe({
     next: async (event) => {
       if (event.type === 'txBestBlocksState' && event.found === true) {
-        console.log('========> 1 in block');
+        console.log('1 in block');
 
         // create the 1nd signed extrinsic
         const secondTx = api.tx.System.remark({
           remark: Binary.fromText('hello world 2'),
         });
 
-        const signedTx = await secondTx.sign(aliceSigner, { at: 'best' });
+        const secondSignedTx = await secondTx.sign(aliceSigner, { at: 'best' });
 
-        client.submitAndWatch(signedTx).subscribe({
+        client.submitAndWatch(secondSignedTx).subscribe({
           next: (e) => console.log(2, JSONprint(e)),
           error: (e) => console.log(2, JSONprint(e)),
         });
