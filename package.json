@@ -33,7 +33,7 @@
     "@polkadot-labs/hdkd-helpers": "^0.0.7",
     "dotenv": "^16.4.5",
     "dotenv-cli": "^7.4.2",
-    "polkadot-api": "^1.6.2",
+    "polkadot-api": "^1.6.4",
     "zod": "^3.23.8"
   },
   "author": "",
