@@ -44,7 +44,7 @@ const main = async () => {
       if (event.type === 'txBestBlocksState' && event.found === true) {
         console.log('1 in block');
 
-        // create the 1nd signed extrinsic
+        // create the 2nd signed extrinsic
         const secondTx = api.tx.System.remark({
           remark: Binary.fromText('hello world 2'),
         });
