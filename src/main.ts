@@ -7,6 +7,7 @@ import { getPolkadotSigner } from 'polkadot-api/signer';
 import { wnd } from '@polkadot-api/descriptors';
 import { Binary, createClient } from 'polkadot-api';
 import { getWsProvider } from 'polkadot-api/ws-provider/node';
+import { withPolkadotSdkCompat } from 'polkadot-api/polkadot-sdk-compat';
 
 const JSONprint = (e: unknown) =>
   JSON.stringify(e, (_, v) => (typeof v === 'bigint' ? v.toString() : v), 4);
@@ -28,7 +29,7 @@ const main = async () => {
 
   // CLIENT AND API
   const client = createClient(
-    getWsProvider('wss://rpc.dotters.network/westend'),
+    withPolkadotSdkCompat(getWsProvider('wss://rpc.dotters.network/westend')),
   );
   const api = client.getTypedApi(wnd);
 
@@ -36,22 +37,17 @@ const main = async () => {
     remark: Binary.fromText('hello world 1'),
   });
 
-  // create the 1st signed extrinsic
-  const signedTx = await firstTx.sign(aliceSigner, { at: 'best' });
-
-  await client.submitAndWatch(signedTx).subscribe({
+  firstTx.signSubmitAndWatch(aliceSigner, { at: 'best' }).subscribe({
     next: async (event) => {
       if (event.type === 'txBestBlocksState' && event.found === true) {
         console.log('1 in block');
 
-        // create the 2nd signed extrinsic
+        // create the 2nd tx
         const secondTx = api.tx.System.remark({
           remark: Binary.fromText('hello world 2'),
         });
 
-        const secondSignedTx = await secondTx.sign(aliceSigner, { at: 'best' });
-
-        client.submitAndWatch(secondSignedTx).subscribe({
+        secondTx.signSubmitAndWatch(aliceSigner, { at: 'best' }).subscribe({
           next: (e) => console.log(2, JSONprint(e)),
           error: (e) => console.log(2, JSONprint(e)),
         });
