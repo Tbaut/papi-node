@@ -153,8 +153,8 @@ const getExtDecoderAt = async (blockHash?: string) => {
 // };
 
 const main = async () => {
-  // see https://hydration.subscan.io/multisig_extrinsic/3422950-2?call_hash=0x139b71c0ceed23715da69f0a04e507308416ba01e42eb98789ca348961e0e225
-  const BLOCK_HEIGHT = 3422950;
+  // see https://hydration.subscan.io/extrinsic/6339113-3
+  const BLOCK_HEIGHT = 6339113;
 
   const blockHash = (
     await hydraClient._request('archive_unstable_hashByHeight', [BLOCK_HEIGHT])
