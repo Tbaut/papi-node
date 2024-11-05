@@ -2,17 +2,9 @@
   "version": 0,
   "descriptorPath": ".papi/descriptors",
   "entries": {
-    "people": {
-      "wsUrl": "wss://polkadot-people-rpc.polkadot.io",
-      "metadata": ".papi/metadata/people.scale"
-    },
-    "dot": {
-      "chain": "polkadot",
-      "metadata": ".papi/metadata/dot.scale"
-    },
-    "pas": {
-      "wsUrl": "wss://paseo.rpc.amforc.com",
-      "metadata": ".papi/metadata/pas.scale"
+    "hydration": {
+      "wsUrl": "wss://rpc.hydradx.cloud",
+      "metadata": ".papi/metadata/hydration.scale"
     }
   }
 }
