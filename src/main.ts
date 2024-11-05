@@ -24,6 +24,7 @@ import {
   type V14,
 } from '@polkadot-api/substrate-bindings';
 import { withPolkadotSdkCompat } from 'polkadot-api/polkadot-sdk-compat';
+import { getExtrinsicDecoder } from '@polkadot-api/tx-utils';
 
 const hydraWs = withPolkadotSdkCompat(getWsProvider('wss://rpc.hydradx.cloud'));
 const hydraClient = createClient(hydraWs);
@@ -31,64 +32,64 @@ const hydraApi = hydraClient.getTypedApi(hydration);
 
 const opaqueMetadata = Tuple(compact, Bin(Infinity)).dec;
 
-const getExtDecoderAt = async (blockHash?: string) => {
-  const rawMetadata = await (blockHash
-    ? hydraClient
-        ._request<{
-          result: HexString;
-        }>('archive_unstable_call', [blockHash, 'Metadata_metadata', ''])
-        .then((x) => opaqueMetadata(x.result)[1])
-    : hydraApi.apis.Metadata.metadata());
+// const getExtDecoderAt = async (blockHash?: string) => {
+//   const rawMetadata = await (blockHash
+//     ? hydraClient
+//         ._request<{
+//           result: HexString;
+//         }>('archive_unstable_call', [blockHash, 'Metadata_metadata', ''])
+//         .then((x) => opaqueMetadata(x.result)[1])
+//     : hydraApi.apis.Metadata.metadata());
 
-  const metadata = metadataCodec.dec(rawMetadata.asBytes()).metadata
-    .value as V14;
-  const dynBuilder = getDynamicBuilder(getLookupFn(metadata));
+//   const metadata = metadataCodec.dec(rawMetadata.asBytes()).metadata
+//     .value as V14;
+//   const dynBuilder = getDynamicBuilder(getLookupFn(metadata));
 
-  const versionDec = enhanceDecoder(u8[1], (value) => ({
-    version: value & ~(1 << 7),
-    signed: !!(value & (1 << 7)),
-  }));
+//   const versionDec = enhanceDecoder(u8[1], (value) => ({
+//     version: value & ~(1 << 7),
+//     signed: !!(value & (1 << 7)),
+//   }));
 
-  const address = Variant({
-    Id: AccountId(),
-    Raw: Hex(),
-    Address32: Hex(32),
-    Address20: Hex(20),
-  }).dec;
-  const signature = Variant({
-    Ed25519: Hex(64),
-    Sr25519: Hex(64),
-    Ecdsa: Hex(65),
-  }).dec;
+//   const address = Variant({
+//     Id: AccountId(),
+//     Raw: Hex(),
+//     Address32: Hex(32),
+//     Address20: Hex(20),
+//   }).dec;
+//   const signature = Variant({
+//     Ed25519: Hex(64),
+//     Sr25519: Hex(64),
+//     Ecdsa: Hex(65),
+//   }).dec;
 
-  const extra = Struct.dec(
-    Object.fromEntries(
-      metadata.extrinsic.signedExtensions.map(
-        (x) =>
-          [x.identifier, dynBuilder.buildDefinition(x.type)[1]] as [
-            string,
-            Decoder<any>,
-          ],
-      ),
-    ) as StringRecord<Decoder<any>>,
-  );
+//   const extra = Struct.dec(
+//     Object.fromEntries(
+//       metadata.extrinsic.signedExtensions.map(
+//         (x) =>
+//           [x.identifier, dynBuilder.buildDefinition(x.type)[1]] as [
+//             string,
+//             Decoder<any>,
+//           ],
+//       ),
+//     ) as StringRecord<Decoder<any>>,
+//   );
 
-  const allBytesDec = Hex(Infinity).dec;
-  const signedBody = Struct.dec({
-    address,
-    signature,
-    extra,
-    callData: allBytesDec,
-  });
+//   const allBytesDec = Hex(Infinity).dec;
+//   const signedBody = Struct.dec({
+//     address,
+//     signature,
+//     extra,
+//     callData: allBytesDec,
+//   });
 
-  return createDecoder((data) => {
-    const len = compact.dec(data);
-    const { signed, version } = versionDec(data);
-    const body = signed ? signedBody : allBytesDec;
+//   return createDecoder((data) => {
+//     const len = compact.dec(data);
+//     const { signed, version } = versionDec(data);
+//     const body = signed ? signedBody : allBytesDec;
 
-    return { len, signed, version, body: body(data) };
-  });
-};
+//     return { len, signed, version, body: body(data) };
+//   });
+// };
 
 // const getEncodedCallFromDecodedTx = (
 //   decodedTx: any,
@@ -169,22 +170,28 @@ const main = async () => {
     blockHash,
   ])) as HexString[];
 
+  const rawMetadata = await (blockHash
+    ? hydraClient
+        ._request<{
+          result: HexString;
+        }>('archive_unstable_call', [blockHash, 'Metadata_metadata', ''])
+        .then((x) => opaqueMetadata(x.result)[1])
+    : hydraApi.apis.Metadata.metadata());
+
   // console.log('blockHash', JSONprint(blockHash));
   // console.log('body', JSONprint(body));
 
-  const decoder = await getExtDecoderAt(blockHash);
+  const decoder = await getExtrinsicDecoder(rawMetadata.asOpaqueBytes());
   // body.forEach((tx) => {
   //   console.log('-----------------------------');
   //   console.log(JSONprint(decoder(tx)));
   // });
   const promises = body.map((tx) => {
     const decodedExtrinsic = decoder(tx);
-    const toDecode = decodedExtrinsic.signed
-      ? (decodedExtrinsic.body as any).callData
-      : decodedExtrinsic.body;
+    const toDecode = decodedExtrinsic.callData;
     // console.log('-----------------------------');
     // console.log(JSONprint(decodedExtrinsic));
-    return hydraApi.txFromCallData(Binary.fromHex(toDecode));
+    return hydraApi.txFromCallData(toDecode);
   });
 
   Promise.all(promises).then((txs) => {
