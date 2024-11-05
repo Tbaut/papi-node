@@ -23,8 +23,9 @@ import {
   type StringRecord,
   type V14,
 } from '@polkadot-api/substrate-bindings';
+import { withPolkadotSdkCompat } from 'polkadot-api/polkadot-sdk-compat';
 
-const hydraWs = getWsProvider('wss://rpc.hydradx.cloud');
+const hydraWs = withPolkadotSdkCompat(getWsProvider('wss://rpc.hydradx.cloud'));
 const hydraClient = createClient(hydraWs);
 const hydraApi = hydraClient.getTypedApi(hydration);
 
